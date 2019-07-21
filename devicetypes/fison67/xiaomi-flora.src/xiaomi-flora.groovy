@@ -1,5 +1,5 @@
 /**
- *  Xiaomi Mi Flora (v.0.0.1)
+ *  Xiaomi Mi Flora (v.0.0.2)
  *
  * MIT License
  *
@@ -58,10 +58,12 @@ metadata {
         capability "Temperature Measurement"
         capability "Relative Humidity Measurement"
         capability "Illuminance Measurement"
-        
 		capability "Refresh"
                
+        attribute "versions", "string"
+        attribute "fertility", "number"
         attribute "lastCheckin", "Date"
+        
         
         command "chartTemperature"
         command "chartMoisture"
@@ -78,11 +80,11 @@ metadata {
     
     preferences {
     	input name: "selectedLang", title:"Select a language" , type: "enum", required: true, options: ["English", "Korean"], defaultValue: "English", description:"Language for DTH"
-        
+		input name: "temperatureType", title:"Select a type" , type: "enum", required: true, options: ["C", "F"], defaultValue: "C"
+
         input name: "totalChartType", title:"Total-Chart Type" , type: "enum", required: true, options: ["line", "bar"], defaultValue: "line", description:"Total Chart Type [ line, bar ]" 
         input name: "historyDayCount", type:"number", title: "Maximum days for single graph", required: true, description: "", defaultValue:1, displayDuringSetup: true
         input name: "historyTotalDayCount", type:"number", title: "Maximum days for total graph", required: true, description: "", defaultValue:7, range: "2..31", displayDuringSetup: true
-
 	}
 
 	tiles {
@@ -220,17 +222,41 @@ def setStatus(params){
 	log.debug "${params.key} : ${params.data}"
     
     def data = new JsonSlurper().parseText(params.data)
-    log.debug data.sensor
     
-    sendEvent(name:"battery", value: data.firmware.battery)
-    sendEvent(name:"versions", value: 'version: ' + data.firmware.firmware)
+    if(data.firmware != null){
+        sendEvent(name:"battery", value: data.firmware.battery)
+        sendEvent(name:"versions", value: 'version: ' + data.firmware.firmware)
+    }
     
-    sendEvent(name:"temperature", value: data.sensor.temperature)
-    sendEvent(name:"illuminance", value: data.sensor.lux)
-    sendEvent(name:"humidity", value: data.sensor.moisture)
-    sendEvent(name:"fertility", value: data.sensor.fertility)
+    if(data.sensor != null){
+        sendEvent(name:"temperature", value: makeTemperature(data.sensor.temperature))
+        sendEvent(name:"illuminance", value: data.sensor.lux)
+        sendEvent(name:"humidity", value: data.sensor.moisture)
+        sendEvent(name:"fertility", value: data.sensor.fertility)
+    }
+    
+    if(data.temperature != null){
+        sendEvent(name:"temperature", value: makeTemperature(data.temperature))
+    }
+    if(data.moisture != null){
+        sendEvent(name:"humidity", value: data.moisture)
+    }
+    if(data.lux != null){
+        sendEvent(name:"illuminance", value: data.lux)
+    }
+    if(data.fertility != null){
+        sendEvent(name:"fertility", value: data.fertility)
+    }
     
     updateLastTime()
+}
+
+def makeTemperature(temperature){
+	if(temperatureType == "F"){
+    	return ((temperature * 9 / 5) + 32)
+    }else{
+    	return temperature
+    }
 }
 
 def updated() {

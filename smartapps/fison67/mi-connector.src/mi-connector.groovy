@@ -1,5 +1,5 @@
 /**
- *  Mi Connector (v.0.0.21)
+ *  Mi Connector (v.0.0.26)
  *
  * MIT License
  *
@@ -48,6 +48,7 @@ preferences {
    page(name: "langPage")
    page(name: "remoteDevicePage")
    page(name: "remoteDeviceNextPage")
+   page(name: "versionPage")
 }
 
 
@@ -70,6 +71,10 @@ def mainPage() {
             paragraph "View this SmartApp's configuration to use it in other places."
             href url:"${apiServerUrl("/api/smartapps/installations/${app.id}/config?access_token=${state.accessToken}")}", style:"embedded", required:false, title:"Config", description:"Tap, select, copy, then click \"Done\""
        	}
+        
+        section() {
+          	href "versionPage", title: "Software Version", description:""
+       	}
     }
 }
 
@@ -78,6 +83,27 @@ def langPage(){
     	section ("Select") {
         	input "Korean",  title: "Korean", multiple: false, required: false
         }
+    }
+}
+
+def versionPage(){
+	
+	def options = [
+     	"method": "GET",
+        "path": "/settings/version",
+        "headers": [
+        	"HOST": settings.address,
+            "Content-Type": "application/json"
+        ]
+    ]
+    def myhubAction = new physicalgraph.device.HubAction(options, null, [callback: versionCallBack])
+    sendHubCommand(myhubAction)
+
+	dynamicPage(name: "versionPage", title:"", refreshInterval:5) {
+        section {
+            paragraph "Version: " + state.dockerVersion
+        }
+        
     }
 }
 
@@ -385,7 +411,7 @@ def addDevice(){
         }else if(params.type == "shuii.humidifier.jsq001"){
         	dth = "Xiaomi Humidifier 3";
             name = "Xiaomi Humidifier 3";
-       	}else if(params.type == "zhimi.fan.v1" || params.type == "zhimi.fan.v2" || params.type == "zhimi.fan.v3" || params.type == "zhimi.fan.sa1" || params.type == "zhimi.fan.za1"){	
+       	}else if(params.type == "zhimi.fan.v1" || params.type == "zhimi.fan.v2" || params.type == "zhimi.fan.v3" || params.type == "zhimi.fan.sa1" || params.type == "zhimi.fan.za1" || params.type == "zhimi.fan.za3" || params.type == "zhimi.fan.za4" || params.type == "dmaker.fan.p5"){	
         	dth = "Xiaomi Fan";	
             name = "Xiaomi Fan";	
         }else if(params.type == "yeelink.light.color1" || params.type == "yeelink.light.color2" || params.type == "yeelink.light.bslamp1" || params.type == "yeelink.light.bslamp2"){
@@ -406,7 +432,7 @@ def addDevice(){
         }else if(params.type == "philips.light.moonlight"){
         	dth = "Xiaomi Philips Bedside Lamp";
             name = "Xiaomi Philips Bedside Lamp";
-        }else if(params.type == "rockrobo.vacuum.v1" || params.type == "roborock.vacuum.c1"){
+        }else if(params.type == "rockrobo.vacuum.v1" || params.type == "roborock.vacuum.c1" || params.type == "roborock.vacuum.m1s"){
         	dth = "Xiaomi Vacuums";
             name = "Xiaomi Vacuums";
         }else if(params.type == "roborock.vacuum.s5"){
@@ -484,7 +510,7 @@ def addDevice(){
         }else if(params.type == "lumi.acpartner.v3"){
         	dth = "Xiaomi Gateway2";
             name = "Xiaomi Gateway2";
-        }else if(params.type == "ble.mitemperature"){
+        }else if(params.type == "ble.mitemperature" || params.type == "ble.einktemperature"){
         	dth = "Xiaomi Bluetooth Weather";
             name = "Xiaomi Bluetooth Weather";
         }else if(params.type == "lumi.vibration"){
@@ -493,6 +519,12 @@ def addDevice(){
         }else if(params.type == "zhimi.heater.za1"){
         	dth = "Xiaomi Heater"
             name = "Xiaomi Heater"
+        }else if(params.type == "zhimi.airfresh.va2"){
+        	dth = "Xiaomi Air Fresh"
+            name = "Xiaomi Air Fresh"
+        }else if(params.type == "air.fan.ca23ad9"){
+        	dth = "Xiaomi Circulator"
+            name = "Xiaomi Circulator"
         }
         
         
@@ -653,6 +685,18 @@ def getLocationID(){
     try{ locationID = location.hubs[0].id }catch(err){}
     return locationID
 }
+
+def versionCallBack(physicalgraph.device.HubResponse hubResponse) {
+    def msg, json, status
+    try {
+        msg = parseLanMessage(hubResponse.description)
+        log.debug "${msg.body}"
+        state.dockerVersion = msg.body
+    } catch (e) {
+        logger('warn', "Exception caught while parsing data: "+e);
+    }
+}
+
 
 mappings {
     if (!params.access_token || (params.access_token && params.access_token != state.accessToken)) {
